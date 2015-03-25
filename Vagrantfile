@@ -1,0 +1,60 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+# All Vagrant configuration is done below. The "2" in Vagrant.configure
+# configures the configuration version (we support older styles for
+# backwards compatibility). Please don't change it unless you know what
+# you're doing.
+VAGRANTFILE_API_VERSION = "2"
+Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
+  # The most common configuration options are documented and commented below.
+  # For a complete reference, please see the online documentation at
+  # https://docs.vagrantup.com.
+
+  # Every Vagrant development environment requires a box. You can search for
+  
+  # name of the box
+	config.vm.box = "ubuntu/trusty64"
+  # setting hostname
+	config.vm.hostname = "OmniDevOps"
+	
+  # better to match jhipster docker container port  
+    config.vm.network "forwarded_port", guest: 8080, host: 8080
+    config.vm.network "forwarded_port", guest: 9000, host: 9000
+	config.vm.network "forwarded_port", guest: 35729, host: 35729
+	config.vm.network "forwarded_port", guest: 4022, host: 4022
+	
+	# mapping the shared folder between the guest machine and vagrant VM
+	config.vm.synced_folder "./jhipster", "/home/vagrant/jhipster", :create => true
+	#config.vm.synced_folder "./workspace", "/home/vagrant/workspace", :create => "true"
+	
+	# running script shell
+	config.vm.provision :shell, :path => "scripts/setup.sh"
+
+	# Pull docker image from "jdubois/jhipster-docker"
+	  config.vm.provision "docker", images: ["jdubois/jhipster-docker"]
+	
+	#Run docker
+	config.vm.provision "docker" do |d|
+	  # with argument: for mapping docker folder "/jhipster" with vagrant shared folder "/home/vagrant/jhipster"
+      d.run "jdubois/jhipster-docker", args: "-v /home/vagrant/jhipster:/jhipster -p 8080:8080 -p 9000:9000 -p 35729:35729 -p 4022:22"
+	end
+	
+	config.vm.provision :shell, :path => "scripts/dockerssh.sh"
+	
+	# Using Puppet provisioning to install and conf needed packeges and tools such as Jenkins
+	config.vm.provision "puppet" do |puppet|
+		puppet.manifests_path = "puppet/manifests"
+		puppet.manifest_file  = "site.pp"
+		puppet.module_path = "puppet/modules"
+	end
+	
+	config.vm.network "forwarded_port", guest: 8080, host: 8042
+	
+	# VirtualBox Specific Customization
+    config.vm.provider "virtualbox" do |vb|
+		# Use VBoxManage to customize the VM. For example to change memory:
+		vb.customize ["modifyvm", :id, "--memory", "3072"]
+    end
+
+end
